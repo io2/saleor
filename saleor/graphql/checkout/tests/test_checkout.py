@@ -34,6 +34,7 @@ from ....checkout.utils import (
     PRIVATE_META_APP_SHIPPING_ID,
     add_variant_to_checkout,
     calculate_checkout_quantity,
+    invalidate_checkout_prices,
 )
 from ....core.payments import PaymentInterface
 from ....core.prices import quantize_price
@@ -2879,7 +2880,13 @@ MUTATION_CHECKOUT_SHIPPING_ADDRESS_UPDATE = """
     "update_checkout_shipping_method_if_invalid",
     wraps=update_checkout_shipping_method_if_invalid,
 )
+@mock.patch(
+    "saleor.graphql.checkout.mutations.checkout_shipping_address_update."
+    "invalidate_checkout_prices",
+    wraps=invalidate_checkout_prices,
+)
 def test_checkout_shipping_address_update(
+    mocked_invalidate_checkout_prices,
     mocked_update_shipping_method,
     user_api_client,
     checkout_with_item,
@@ -2919,6 +2926,7 @@ def test_checkout_shipping_address_update(
     checkout_info = fetch_checkout_info(checkout, lines, [], manager)
     mocked_update_shipping_method.assert_called_once_with(checkout_info, lines)
     assert checkout.last_change != previous_last_change
+    assert mocked_invalidate_checkout_prices.call_count == 1
 
 
 @mock.patch(
@@ -3261,8 +3269,16 @@ def test_checkout_shipping_address_update_exclude_shipping_method(
     assert checkout.shipping_method is None
 
 
+@mock.patch(
+    "saleor.graphql.checkout.mutations.checkout_billing_address_update."
+    "invalidate_checkout_prices",
+    wraps=invalidate_checkout_prices,
+)
 def test_checkout_billing_address_update(
-    user_api_client, checkout_with_item, graphql_address_data
+    mocked_invalidate_checkout_prices,
+    user_api_client,
+    checkout_with_item,
+    graphql_address_data,
 ):
     checkout = checkout_with_item
     assert checkout.shipping_address is None
@@ -3309,6 +3325,7 @@ def test_checkout_billing_address_update(
     assert checkout.billing_address.country == billing_address["country"]
     assert checkout.billing_address.city == billing_address["city"].upper()
     assert checkout.last_change != previous_last_change
+    assert mocked_invalidate_checkout_prices.call_count == 1
 
 
 CHECKOUT_EMAIL_UPDATE_MUTATION = """
@@ -3750,7 +3767,7 @@ def test_checkout_prices(user_api_client, checkout_with_item):
         lines=lines,
         checkout_line_info=line_info,
         discounts=[],
-    ).price_with_discounts
+    )
     assert (
         data["lines"][0]["unitPrice"]["gross"]["amount"]
         == line_total_price.gross.amount / line_info.line.quantity
@@ -3807,7 +3824,7 @@ def test_checkout_prices_checkout_with_custom_prices(
     )
     assert (
         data["totalPrice"]["gross"]["amount"]
-        == checkout_line.quantity * price_override + shipping_price.gross.amount
+        == checkout_line.quantity * price_override + shipping_price.amount
     )
     assert (
         data["subtotalPrice"]["gross"]["amount"]
@@ -3869,7 +3886,7 @@ def test_checkout_prices_with_sales(user_api_client, checkout_with_item, discoun
         lines=lines,
         checkout_line_info=line_info,
         discounts=[discount_info],
-    ).price_with_discounts
+    )
     assert (
         data["lines"][0]["unitPrice"]["gross"]["amount"]
         == line_total_price.gross.amount / line_info.line.quantity
@@ -3933,17 +3950,12 @@ def test_checkout_prices_with_specific_voucher(
     assert data["subtotalPrice"]["gross"]["amount"] == (subtotal.gross.amount)
     line_info = lines[0]
     assert line_info.line.quantity > 0
-    line_total_prices = calculations.checkout_line_total(
+    line_total_price = calculations.checkout_line_total(
         manager=manager,
         checkout_info=checkout_info,
         lines=lines,
         checkout_line_info=line_info,
     )
-    assert (
-        line_total_prices.price_with_discounts != line_total_prices.undiscounted_price
-    )
-    assert line_total_prices.price_with_discounts != line_total_prices.price_with_sale
-    line_total_price = line_total_prices.price_with_discounts
     assert (
         data["lines"][0]["unitPrice"]["gross"]["amount"]
         == line_total_price.gross.amount / line_info.line.quantity
@@ -4005,17 +4017,12 @@ def test_checkout_prices_with_voucher_once_per_order(
     assert data["subtotalPrice"]["gross"]["amount"] == (subtotal.gross.amount)
     line_info = lines[0]
     assert line_info.line.quantity > 0
-    line_total_prices = calculations.checkout_line_total(
+    line_total_price = calculations.checkout_line_total(
         manager=manager,
         checkout_info=checkout_info,
         lines=lines,
         checkout_line_info=line_info,
     )
-    assert (
-        line_total_prices.price_with_discounts != line_total_prices.undiscounted_price
-    )
-    assert line_total_prices.price_with_discounts != line_total_prices.price_with_sale
-    line_total_price = line_total_prices.price_with_discounts
     assert data["lines"][0]["unitPrice"]["gross"]["amount"] == float(
         quantize_price(
             line_total_price.gross.amount / line_info.line.quantity, checkout.currency
@@ -4099,7 +4106,13 @@ MUTATION_UPDATE_DELIVERY_METHOD = """
     "saleor.graphql.checkout.mutations.checkout_shipping_method_update."
     "clean_delivery_method"
 )
+@patch(
+    "saleor.graphql.checkout.mutations.checkout_shipping_method_update."
+    "invalidate_checkout_prices",
+    wraps=invalidate_checkout_prices,
+)
 def test_checkout_shipping_method_update(
+    mocked_invalidate_checkout_prices,
     mock_clean_shipping,
     staff_api_client,
     shipping_method,
@@ -4142,6 +4155,7 @@ def test_checkout_shipping_method_update(
         assert data["checkout"]["token"] == str(checkout.token)
         assert checkout.shipping_method == shipping_method
         assert checkout.last_change != previous_last_change
+        assert mocked_invalidate_checkout_prices.call_count == 1
     else:
         assert len(errors) == 1
         assert errors[0]["field"] == "shippingMethod"
@@ -4262,7 +4276,13 @@ def test_checkout_shipping_method_update_external_shipping_method_with_tax_plugi
     "saleor.graphql.checkout.mutations.checkout_delivery_method_update."
     "clean_delivery_method"
 )
+@patch(
+    "saleor.graphql.checkout.mutations.checkout_delivery_method_update."
+    "invalidate_checkout_prices",
+    wraps=invalidate_checkout_prices,
+)
 def test_checkout_delivery_method_update(
+    mock_invalidate_checkout_prices,
     mock_clean_delivery,
     api_client,
     delivery_method,
@@ -4303,6 +4323,7 @@ def test_checkout_delivery_method_update(
     if is_valid_delivery_method:
         assert not errors
         assert getattr(checkout, attribute_name) == delivery_method
+        assert mock_invalidate_checkout_prices.call_count == 1
     else:
         assert len(errors) == 1
         assert errors[0]["field"] == "deliveryMethodId"
