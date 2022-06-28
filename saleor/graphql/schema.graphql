@@ -4585,6 +4585,10 @@ type Category implements Node & ObjectWithMetadata {
 
     """
     The format of the image. When not provided, format of the original image will be used. Must be provided together with the size value, otherwise original image will be returned.
+    
+    Added in Saleor 3.5.
+    
+    Note: this API is currently in Feature Preview and can be subject to changes at later point.
     """
     format: ThumbnailFormatEnum
   ): Image
@@ -5217,6 +5221,10 @@ type ProductImage {
 
     """
     The format of the image. When not provided, format of the original image will be used. Must be provided together with the size value, otherwise original image will be returned.
+    
+    Added in Saleor 3.5.
+    
+    Note: this API is currently in Feature Preview and can be subject to changes at later point.
     """
     format: ThumbnailFormatEnum
   ): String!
@@ -5239,6 +5247,10 @@ type ProductMedia implements Node {
 
     """
     The format of the image. When not provided, format of the original image will be used. Must be provided together with the size value, otherwise original image will be returned.
+    
+    Added in Saleor 3.5.
+    
+    Note: this API is currently in Feature Preview and can be subject to changes at later point.
     """
     format: ThumbnailFormatEnum
   ): String!
@@ -5574,6 +5586,10 @@ type Collection implements Node & ObjectWithMetadata {
 
     """
     The format of the image. When not provided, format of the original image will be used. Must be provided together with the size value, otherwise original image will be returned.
+    
+    Added in Saleor 3.5.
+    
+    Note: this API is currently in Feature Preview and can be subject to changes at later point.
     """
     format: ThumbnailFormatEnum
   ): Image
@@ -7440,6 +7456,10 @@ type User implements Node & ObjectWithMetadata {
 
     """
     The format of the avatar. When not provided format of the original image will be used. Must be provided together with the size value, otherwise original image will be returned.
+    
+    Added in Saleor 3.5.
+    
+    Note: this API is currently in Feature Preview and can be subject to changes at later point.
     """
     format: ThumbnailFormatEnum
   ): Image
