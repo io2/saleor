@@ -1140,6 +1140,7 @@ def generate_checkout_payload_for_tax_calculation(
 ):
     checkout = checkout_info.checkout
     included_taxes_in_prices = include_taxes_in_prices()
+    discount_infos = fetch_active_discounts()
 
     serializer = PayloadSerializer()
 
@@ -1183,9 +1184,7 @@ def generate_checkout_payload_for_tax_calculation(
 
     # Prepare line data
     lines_dict_data = serialize_checkout_lines_for_tax_calculation(
-        checkout_info,
-        lines,
-        included_taxes_in_prices,
+        checkout_info, lines, discount_infos
     )
 
     checkout_data = serializer.serialize(
